@@ -33,15 +33,12 @@ public class Learner extends SmartAgentBase {
 
 	public String name() {
 		String result = "Learner";
-		rand = new Random();
-		java.util.Arrays.fill(deployWeights, 1);
-		java.util.Arrays.fill(attackWeights, 1);
-		java.util.Arrays.fill(fortifyWeights, 1);
 		return result;
 	}
 
 	public void placeArmies( int numberOfArmies )
 	{
+		setup();
 	Country mostValuableCountry = null;
 	float largestStrategicValue=-100000;
 	// Use a PlayerIterator to cycle through all the countries that we own.
@@ -188,12 +185,6 @@ public void fortifyPhase()
 	}
 }
 
-public String youWon()
-{ 
-String answer = "The machines are learning";
-
-return answer;
-}
 
 
 	// methods for machine learning aspects of the AI
@@ -402,5 +393,178 @@ return answer;
 	return pickCountryInContinent(goalCont);
 	}
 	
+	
+	public String youWon()
+	{ 
+		// run the "win" fitness function to adjust rules
+		// store the new weight values
+	String answer = "The machines are learning";
+	float[][] outgoingWeights = winFitnessFunction();
+	storeWeightValues(outgoingWeights);
+	return answer;
+	}
+
+	public String message( String message, Object data )
+	{
+	if ("youLose".equals(message))
+		{
+		// run the "loss" fitness function to adjust rules
+		// store the new weight values
+		int conqueringPlayerID = ((Integer)data).intValue();
+		float[][] outgoingWeights = lossFitnessFunction();
+		storeWeightValues(outgoingWeights);
+		// now you could log that you have lost this game...
+//		board.playAudioAtURL("http://sillysoft.net/sounds/boo.wav");
+		}
+	return null;
+	}
+	
+	public float[][] winFitnessFunction() {
+		float[][] results =  new float[3][12];
+		for (int i=0;i<12;i++) {
+			float newVal;
+			// apply fitness function to deploy[i]
+			newVal = 3; // for testing purposes
+			results[1][i] = newVal;
+		}
+		for (int i=0;i<12;i++) {
+			float newVal;
+			// apply fitness function to attack[i]
+			newVal = 3;
+			results[2][i] = newVal;
+		}
+		for (int i=0;i<12;i++) {
+			float newVal;
+			// apply fitness function to fortify[i]
+			newVal = 3;
+			results[3][i] = newVal;
+		}
+		return results;
+	}
+	
+	public float[][] lossFitnessFunction() {
+		float[][] results =  new float[3][12];
+		for (int i=0;i<12;i++) {
+			float newVal;
+			// apply fitness function to deploy[i]
+			newVal = 2; // for testing purposes
+			results[0][i] = newVal;
+		}
+		for (int i=0;i<12;i++) {
+			float newVal;
+			// apply fitness function to attack[i]
+			newVal = 2;
+			results[1][i] = newVal;
+		}
+		for (int i=0;i<12;i++) {
+			float newVal;
+			// apply fitness function to fortify[i]
+			newVal = 2;
+			results[2][i] = newVal;
+		}
+		return results;
+	}
+	
+	public void getWeightValues() {
+		deployWeights[0] = board.storageGetFloat("deployA", Float.NaN);
+		deployWeights[1] = board.storageGetFloat("deployB", Float.NaN);
+		deployWeights[2] = board.storageGetFloat("deployC", Float.NaN);
+		deployWeights[3] = board.storageGetFloat("deployD", Float.NaN);
+		deployWeights[4] = board.storageGetFloat("deployE", Float.NaN);
+		deployWeights[5] = board.storageGetFloat("deployF", Float.NaN);
+		deployWeights[6] = board.storageGetFloat("deployG", Float.NaN);
+		deployWeights[7] = board.storageGetFloat("deployH", Float.NaN);
+		deployWeights[8] = board.storageGetFloat("deployI", Float.NaN);
+		deployWeights[9] = board.storageGetFloat("deployJ", Float.NaN);
+		deployWeights[10] = board.storageGetFloat("deployK", Float.NaN);
+		deployWeights[11] = board.storageGetFloat("deployL", Float.NaN);
+		
+		attackWeights[0] = board.storageGetFloat("attackA", Float.NaN);
+		attackWeights[1] = board.storageGetFloat("attackB", Float.NaN);
+		attackWeights[2] = board.storageGetFloat("attackC", Float.NaN);
+		attackWeights[3] = board.storageGetFloat("attackD", Float.NaN);
+		attackWeights[4] = board.storageGetFloat("attackE", Float.NaN);
+		attackWeights[5] = board.storageGetFloat("attackF", Float.NaN);
+		attackWeights[6] = board.storageGetFloat("attackG", Float.NaN);
+		attackWeights[7] = board.storageGetFloat("attackH", Float.NaN);
+		attackWeights[8] = board.storageGetFloat("attackI", Float.NaN);
+		attackWeights[9] = board.storageGetFloat("attackJ", Float.NaN);
+		attackWeights[10] = board.storageGetFloat("attackK", Float.NaN);
+		attackWeights[11] = board.storageGetFloat("attackL", Float.NaN);
+		
+		fortifyWeights[0] = board.storageGetFloat("fortifyA", Float.NaN);
+		fortifyWeights[1] = board.storageGetFloat("fortifyB", Float.NaN);
+		fortifyWeights[2] = board.storageGetFloat("fortifyC", Float.NaN);
+		fortifyWeights[3] = board.storageGetFloat("fortifyD", Float.NaN);
+		fortifyWeights[4] = board.storageGetFloat("fortifyE", Float.NaN);
+		fortifyWeights[5] = board.storageGetFloat("fortifyF", Float.NaN);
+		fortifyWeights[6] = board.storageGetFloat("fortifyG", Float.NaN);
+		fortifyWeights[7] = board.storageGetFloat("fortifyH", Float.NaN);
+		fortifyWeights[8] = board.storageGetFloat("fortifyI", Float.NaN);
+		fortifyWeights[9] = board.storageGetFloat("fortifyJ", Float.NaN);
+		fortifyWeights[10] = board.storageGetFloat("fortifyK", Float.NaN);
+		fortifyWeights[11] = board.storageGetFloat("fortifyL", Float.NaN);
+	}
+	
+	public void storeWeightValues(float[][] weights) {
+		board.storagePutFloat("deployA", weights[0][0]);
+		board.storagePutFloat("deployB", weights[0][1]);
+		board.storagePutFloat("deployC", weights[0][2]);
+		board.storagePutFloat("deployD", weights[0][3]);
+		board.storagePutFloat("deployE", weights[0][4]);
+		board.storagePutFloat("deployF", weights[0][5]);
+		board.storagePutFloat("deployG", weights[0][6]);
+		board.storagePutFloat("deployH", weights[0][7]);
+		board.storagePutFloat("deployI", weights[0][8]);
+		board.storagePutFloat("deployJ", weights[0][9]);
+		board.storagePutFloat("deployK", weights[0][10]);
+		board.storagePutFloat("deployL", weights[0][11]);
+		
+		board.storagePutFloat("attackA", weights[1][0]);
+		board.storagePutFloat("attackB", weights[1][1]);
+		board.storagePutFloat("attackC", weights[1][2]);
+		board.storagePutFloat("attackD", weights[1][3]);
+		board.storagePutFloat("attackE", weights[1][4]);
+		board.storagePutFloat("attackF", weights[1][5]);
+		board.storagePutFloat("attackG", weights[1][6]);
+		board.storagePutFloat("attackH", weights[1][7]);
+		board.storagePutFloat("attackI", weights[1][8]);
+		board.storagePutFloat("attackJ", weights[1][9]);
+		board.storagePutFloat("attackK", weights[1][10]);
+		board.storagePutFloat("attackL", weights[1][11]);
+		
+		board.storagePutFloat("fortifyA", weights[2][0]);
+		board.storagePutFloat("fortifyB", weights[2][1]);
+		board.storagePutFloat("fortifyC", weights[2][2]);
+		board.storagePutFloat("fortifyD", weights[2][3]);
+		board.storagePutFloat("fortifyE", weights[2][4]);
+		board.storagePutFloat("fortifyF", weights[2][5]);
+		board.storagePutFloat("fortifyG", weights[2][6]);
+		board.storagePutFloat("fortifyH", weights[2][7]);
+		board.storagePutFloat("fortifyI", weights[2][8]);
+		board.storagePutFloat("fortifyJ", weights[2][9]);
+		board.storagePutFloat("fortifyK", weights[2][10]);
+		board.storagePutFloat("fortifyL", weights[2][11]);
+	}
+	
+	public void setup() {
+		rand = new Random();
+		makeLogEntry("About to get deployA...\n");
+		float stored = board.storageGetFloat("deployA", Float.NaN);
+		makeLogEntry("Got deployA: " + stored + "\n");
+		if (Float.isNaN(stored)) {
+			makeLogEntry("stored is NaN.\n");
+			// if the weights have not been previously initialized, initialize them
+			java.util.Arrays.fill(deployWeights, 1);
+			java.util.Arrays.fill(attackWeights, 1);
+			java.util.Arrays.fill(fortifyWeights, 1);
+		}
+		else { // otherwise, retrieve them
+			makeLogEntry("retrieving stored...\n");
+			getWeightValues();
+			makeLogEntry("deployWeights: " + deployWeights.toString()
+					+ "\nattackWeights: " + attackWeights.toString() + "\nfortifyWeights: " + fortifyWeights.toString() + "\n");
+		}
+	}
 	
 }
