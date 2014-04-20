@@ -200,7 +200,7 @@ public void fortifyPhase()
 	// methods for machine learning aspects of the AI
 	
 	
-	private float howDivided(Country country) 
+	private float howDivided(Country country, float[] weights) 
 	{
 		int[] hostileCountries=country.getHostileAdjoiningCodeList();
 		List <Integer> IDList = new ArrayList <Integer>();
@@ -212,7 +212,7 @@ public void fortifyPhase()
 				IDList.add(countryID);
 			}			
 		}
-		return IDList.size();
+		return IDList.size()*weights[2];
 	
 	}
 	
@@ -223,10 +223,10 @@ public void fortifyPhase()
 	 * @param numberOfTroops
 	 * @return The weighted number of troops
 	 */
-	public float calculateWeightedTroopValue(Country srcCountry, Country destCountry) {
+	public float calculateWeightedTroopValue(Country srcCountry, Country destCountry, float weights[]) {
 		float result = 0;
 		int distance = BoardHelper.easyCostBetweenCountries(srcCountry,destCountry, countries).length;
-		result = (float) distance;
+		result = weights[3] * destCountry.getArmies()/(float) distance;
 		return result;
 	}
 	/**
@@ -259,17 +259,17 @@ public void fortifyPhase()
 			while (itr.hasNext()) {
 				Country otherCountry = itr.next();
 				if (otherCountry.getOwner() != ID) { // if the country is owned by an enemy
-					enemyTroops += calculateWeightedTroopValue(country, otherCountry);
+					enemyTroops += calculateWeightedTroopValue(country, otherCountry, weights);
 				}
 				else
 				{
-					friendlyTroops += calculateWeightedTroopValue(country, otherCountry);
+					friendlyTroops += calculateWeightedTroopValue(country, otherCountry,weights);
 				}
 			}
 			enemyTroops += BoardHelper.getEnemyArmiesInContinent(ID, i, countries);
 		}
 		
-		float divided = howDivided(country);
+		float divided = howDivided(country,weights);
 		result = (enemyTroops/divided) - friendlyTroops;
 		return result;
 	}
@@ -286,7 +286,7 @@ public void fortifyPhase()
 		// "distance" is a little abstract, since we're talking about the enemy as a whole
 		int income = board.getPlayerIncome(player);
 		int cards = board.getPlayerCards(player);
-		result = weights[6]*income + weights[7]*cards;
+		result = weights[7]*income + weights[8]*cards;
 		return result;
 	}
 	
@@ -371,17 +371,48 @@ public void fortifyPhase()
 				
 			}
 		}
-		float result=(weights[4]*continentsHeld)/(weights[5]*greatestVulnerability);
+		int armiesCount=BoardHelper.getPlayerArmies(playerID, countries);
+		float result=(weights[4]*continentsHeld + weights[5]*armiesCount)/(weights[6]*greatestVulnerability);
 		return result;
 	}
 	
 	private float calculateAdvantage(int playerID, float[] weights) 
 	{
 		float stability=calculateStability(playerID, weights);
-		float threat=calculateThreat(playerID, weights);
-		float result=weights[10]*stability-weights[11]*threat;
+		int[] enemyPlayers=getEnemyPlayerIDs(playerID);
+		float totalThreat=0;
+		for(int i=0; i<enemyPlayers.length; i++)
+		{
+			totalThreat+=calculateThreat(enemyPlayers[i], weights);
+		}
+		float result=weights[9]*stability-weights[10]*totalThreat;
 		return result;
 	}
+	private int[] getEnemyPlayerIDs(int playerID)
+	{
+		
+		int remainingPlayers=board.getNumberOfPlayersLeft()-1;
+		int[] result=new int[remainingPlayers];
+		List <Integer> enemyIDs= new ArrayList <Integer>();
+		int i=0;
+		int j=0;
+		while(i<remainingPlayers)
+		{
+			int currentID=countries[j].getOwner();
+			Integer ID=new Integer(currentID);
+			if(currentID!=playerID && enemyIDs.contains(ID))
+			{
+				result[i]=currentID;
+				enemyIDs.add(ID);
+				i++;
+			}
+			j++;
+		}
+		
+		return result;
+	}
+	
+	
 	private boolean plausibleAttack(Country attacker, Country target) {
 		return true;
 	}
@@ -438,6 +469,8 @@ public void fortifyPhase()
 		// get the array of deploy rules
 		char[] raw = {};
 		FileReader reader;
+		makeLogEntry("------Rule Path: " + rulesPath + "\n\n");
+
 		try {
 			reader = new FileReader(rulesPath);
 			try {
