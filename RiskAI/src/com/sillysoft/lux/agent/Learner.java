@@ -3,6 +3,13 @@ package com.sillysoft.lux.agent;
 import com.sillysoft.lux.*;
 import com.sillysoft.lux.util.*;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.Random;
 import java.util.List;
 import java.util.ArrayList;
@@ -20,6 +27,9 @@ public class Learner extends SmartAgentBase {
 		float recklessCardThreshold;
 	// fine-tuning weights that can be adjusted via the rule set
 		float[] deployWeights, attackWeights, fortifyWeights;
+		// A filename for the log
+		private String fileName;
+		private String rulesPath = Board.getAgentPath() + "rules.txt";
 		
 
 	public float version() {
@@ -398,153 +408,97 @@ public void fortifyPhase()
 	{ 
 		// run the "win" fitness function to adjust rules
 		// store the new weight values
-	String answer = "The machines are learning";
-	float[][] outgoingWeights = winFitnessFunction();
-	storeWeightValues(outgoingWeights);
-	return answer;
+		String answer = "The machines are learning";
+		float gameResult = winFitnessFunction();
+		adjustRules(deployWeights, attackWeights, fortifyWeights, gameResult);
+		return answer;
 	}
 
 	public String message( String message, Object data )
 	{
 	if ("youLose".equals(message))
 		{
-		// run the "loss" fitness function to adjust rules
-		// store the new weight values
-		int conqueringPlayerID = ((Integer)data).intValue();
-		float[][] outgoingWeights = lossFitnessFunction();
-		storeWeightValues(outgoingWeights);
-		// now you could log that you have lost this game...
-//		board.playAudioAtURL("http://sillysoft.net/sounds/boo.wav");
+			float gameResult = lossFitnessFunction();
+			adjustRules(deployWeights, attackWeights, fortifyWeights, gameResult);
 		}
 	return null;
 	}
 	
-	public float[][] winFitnessFunction() {
-		float[][] results =  new float[3][12];
-		for (int i=0;i<12;i++) {
-			float newVal;
-			// apply fitness function to deploy[i]
-			newVal = 3; // for testing purposes
-			results[1][i] = newVal;
-		}
-		for (int i=0;i<12;i++) {
-			float newVal;
-			// apply fitness function to attack[i]
-			newVal = 3;
-			results[2][i] = newVal;
-		}
-		for (int i=0;i<12;i++) {
-			float newVal;
-			// apply fitness function to fortify[i]
-			newVal = 3;
-			results[3][i] = newVal;
-		}
-		return results;
+	public float winFitnessFunction() {
+		float result = 0.0f;
+		return result;
 	}
 	
-	public float[][] lossFitnessFunction() {
-		float[][] results =  new float[3][12];
-		for (int i=0;i<12;i++) {
-			float newVal;
-			// apply fitness function to deploy[i]
-			newVal = 2; // for testing purposes
-			results[0][i] = newVal;
-		}
-		for (int i=0;i<12;i++) {
-			float newVal;
-			// apply fitness function to attack[i]
-			newVal = 2;
-			results[1][i] = newVal;
-		}
-		for (int i=0;i<12;i++) {
-			float newVal;
-			// apply fitness function to fortify[i]
-			newVal = 2;
-			results[2][i] = newVal;
-		}
-		return results;
+	public float lossFitnessFunction() {
+		float result = 0.0f;
+		return result;
 	}
 	
 	public void getWeightValues() {
-		deployWeights[0] = board.storageGetFloat("deployA", Float.NaN);
-		deployWeights[1] = board.storageGetFloat("deployB", Float.NaN);
-		deployWeights[2] = board.storageGetFloat("deployC", Float.NaN);
-		deployWeights[3] = board.storageGetFloat("deployD", Float.NaN);
-		deployWeights[4] = board.storageGetFloat("deployE", Float.NaN);
-		deployWeights[5] = board.storageGetFloat("deployF", Float.NaN);
-		deployWeights[6] = board.storageGetFloat("deployG", Float.NaN);
-		deployWeights[7] = board.storageGetFloat("deployH", Float.NaN);
-		deployWeights[8] = board.storageGetFloat("deployI", Float.NaN);
-		deployWeights[9] = board.storageGetFloat("deployJ", Float.NaN);
-		deployWeights[10] = board.storageGetFloat("deployK", Float.NaN);
-		deployWeights[11] = board.storageGetFloat("deployL", Float.NaN);
+		// get the array of deploy rules
+		char[] raw = {};
+		FileReader reader;
+		try {
+			reader = new FileReader(rulesPath);
+			try {
+				reader.read(raw);
+				reader.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String[] rulesStrings = raw.toString().split("\n");
+		Rule[] rules = new Rule[rulesStrings.length];
+		for (int i=1; i < rulesStrings.length; i++) {
+			rules[i] = new Rule(rulesStrings[i]);
+		}
+		// sort in ascending rank (1,2,...,n) i.e., better rules first
+		RuleComparator<Rule> c = new RuleComparator<Rule>();
+		Arrays.sort(rules, c);
 		
-		attackWeights[0] = board.storageGetFloat("attackA", Float.NaN);
-		attackWeights[1] = board.storageGetFloat("attackB", Float.NaN);
-		attackWeights[2] = board.storageGetFloat("attackC", Float.NaN);
-		attackWeights[3] = board.storageGetFloat("attackD", Float.NaN);
-		attackWeights[4] = board.storageGetFloat("attackE", Float.NaN);
-		attackWeights[5] = board.storageGetFloat("attackF", Float.NaN);
-		attackWeights[6] = board.storageGetFloat("attackG", Float.NaN);
-		attackWeights[7] = board.storageGetFloat("attackH", Float.NaN);
-		attackWeights[8] = board.storageGetFloat("attackI", Float.NaN);
-		attackWeights[9] = board.storageGetFloat("attackJ", Float.NaN);
-		attackWeights[10] = board.storageGetFloat("attackK", Float.NaN);
-		attackWeights[11] = board.storageGetFloat("attackL", Float.NaN);
+		// for A-L, find the first rule that mentions that letter
+		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
+
+		// get the array of attack rules, sorted in ascending rank (1,2,...,n)
+		// for A-L, find the first rule that mentions that letter
+		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
 		
-		fortifyWeights[0] = board.storageGetFloat("fortifyA", Float.NaN);
-		fortifyWeights[1] = board.storageGetFloat("fortifyB", Float.NaN);
-		fortifyWeights[2] = board.storageGetFloat("fortifyC", Float.NaN);
-		fortifyWeights[3] = board.storageGetFloat("fortifyD", Float.NaN);
-		fortifyWeights[4] = board.storageGetFloat("fortifyE", Float.NaN);
-		fortifyWeights[5] = board.storageGetFloat("fortifyF", Float.NaN);
-		fortifyWeights[6] = board.storageGetFloat("fortifyG", Float.NaN);
-		fortifyWeights[7] = board.storageGetFloat("fortifyH", Float.NaN);
-		fortifyWeights[8] = board.storageGetFloat("fortifyI", Float.NaN);
-		fortifyWeights[9] = board.storageGetFloat("fortifyJ", Float.NaN);
-		fortifyWeights[10] = board.storageGetFloat("fortifyK", Float.NaN);
-		fortifyWeights[11] = board.storageGetFloat("fortifyL", Float.NaN);
+		// get the array of fortify rules, sorted in ascending rank (1,2,...,n)
+		// for A-L, find the first rule that mentions that letter
+		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
 	}
 	
-	public void storeWeightValues(float[][] weights) {
-		board.storagePutFloat("deployA", weights[0][0]);
-		board.storagePutFloat("deployB", weights[0][1]);
-		board.storagePutFloat("deployC", weights[0][2]);
-		board.storagePutFloat("deployD", weights[0][3]);
-		board.storagePutFloat("deployE", weights[0][4]);
-		board.storagePutFloat("deployF", weights[0][5]);
-		board.storagePutFloat("deployG", weights[0][6]);
-		board.storagePutFloat("deployH", weights[0][7]);
-		board.storagePutFloat("deployI", weights[0][8]);
-		board.storagePutFloat("deployJ", weights[0][9]);
-		board.storagePutFloat("deployK", weights[0][10]);
-		board.storagePutFloat("deployL", weights[0][11]);
+	public void adjustRules(float[] deployWeights, float[] attackWeights, float[] fortifyWeights, float gameResult) {
+		// get the array of deploy rules
+		// for A-L, find the rule that has the weight that was used during this game
+		// change the weight's rank by amount gameResult - determined by the fitness function and passed in
 		
-		board.storagePutFloat("attackA", weights[1][0]);
-		board.storagePutFloat("attackB", weights[1][1]);
-		board.storagePutFloat("attackC", weights[1][2]);
-		board.storagePutFloat("attackD", weights[1][3]);
-		board.storagePutFloat("attackE", weights[1][4]);
-		board.storagePutFloat("attackF", weights[1][5]);
-		board.storagePutFloat("attackG", weights[1][6]);
-		board.storagePutFloat("attackH", weights[1][7]);
-		board.storagePutFloat("attackI", weights[1][8]);
-		board.storagePutFloat("attackJ", weights[1][9]);
-		board.storagePutFloat("attackK", weights[1][10]);
-		board.storagePutFloat("attackL", weights[1][11]);
+		// get the array of attack rules
+		// get the array of deploy rules
+		// for A-L, find the rule that has the weight that was used during this game
+		// change the weight's rank by amount gameResult - determined by the fitness function and passed in
 		
-		board.storagePutFloat("fortifyA", weights[2][0]);
-		board.storagePutFloat("fortifyB", weights[2][1]);
-		board.storagePutFloat("fortifyC", weights[2][2]);
-		board.storagePutFloat("fortifyD", weights[2][3]);
-		board.storagePutFloat("fortifyE", weights[2][4]);
-		board.storagePutFloat("fortifyF", weights[2][5]);
-		board.storagePutFloat("fortifyG", weights[2][6]);
-		board.storagePutFloat("fortifyH", weights[2][7]);
-		board.storagePutFloat("fortifyI", weights[2][8]);
-		board.storagePutFloat("fortifyJ", weights[2][9]);
-		board.storagePutFloat("fortifyK", weights[2][10]);
-		board.storagePutFloat("fortifyL", weights[2][11]);
+		// get the array of fortify rules
+		// get the array of deploy rules
+		// for A-L, find the rule that has the weight that was used during this game
+		// change the weight's rank by amount gameResult - determined by the fitness function and passed in
+		
+		// write the changes to disk for persistence
+		File rulesFile = new File(rulesPath);
+		
+		FileWriter writer;
+		try {
+			writer = new FileWriter(rulesFile, false);
+			writer.write("");
+			writer.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
 	}
 	
 	public void setup() {
@@ -560,11 +514,31 @@ public void fortifyPhase()
 			java.util.Arrays.fill(fortifyWeights, 1);
 		}
 		else { // otherwise, retrieve them
-			makeLogEntry("retrieving stored...\n");
 			getWeightValues();
-			makeLogEntry("deployWeights: " + deployWeights.toString()
-					+ "\nattackWeights: " + attackWeights.toString() + "\nfortifyWeights: " + fortifyWeights.toString() + "\n");
 		}
 	}
+	
+	public void makeLogEntry(String message) {
+		FileWriter writer;
+		try {
+			// write to the file
+			if (fileName == null) {
+				Date date = new Date();
+				fileName = date.toString();
+				fileName = fileName.replace(' ', '-');
+				fileName = fileName.replace(":", "");
+				File file = new File(Board.getAgentPath() + File.separator + name() + "Logs" + File.separator + fileName + ".txt");
+				file.getParentFile().mkdirs();
+				writer = new FileWriter(file, false);
+			} else {
+				writer = new FileWriter(Board.getAgentPath() + File.separator + name() + "Logs" + File.separator + fileName + ".txt", true);
+			}
+			writer.write(message);
+			writer.close(); // flush and close
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	} 
 	
 }

@@ -33,8 +33,7 @@ protected int goalCont;
 // Since all subclasses need a random number generator (for you-won strings) we keep one. 
 protected Random rand;
 
-// A filename for the log
-protected String fileName;
+
 
 public SmartAgentBase()
 	{
@@ -1021,26 +1020,6 @@ public void debug(Object text)
 //	System.out.flush();
     }
 
-public void makeLogEntry(String message) {
-	FileWriter writer;
-	try {
-		// write to the file
-		if (fileName == null) {
-			Date date = new Date();
-			fileName = date.toString();
-			fileName = fileName.replace(' ', '-');
-			fileName = fileName.replace(":", "");
-			writer = new FileWriter(board.getAgentPath() + File.separator + name() + "Logs" + File.separator + fileName + ".txt", false);
-		} else {
-			writer = new FileWriter(board.getAgentPath() + File.separator + name() + "Logs" + File.separator + fileName + ".txt", true);
-		}
-		writer.write(message);
-		writer.flush();
-		writer.close();
-	} catch (IOException e) {
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	}
-} 
+
 
 }	// End of SmartAgentBase class
