@@ -26,11 +26,13 @@ public class Learner extends SmartAgentBase {
 		float recklessFortifyThreshold;
 		float recklessCardThreshold;
 	// fine-tuning weights that can be adjusted via the rule set
+		Rule[] deployRules, attackRules, fortifyRules;
 		float[] deployWeights, attackWeights, fortifyWeights;
 		// A filename for the log
 		private String fileName;
 		private String rulesPath = Board.getAgentPath() + "rules.txt";
-		
+		private float explorationThreshold = 0.15f; // probability to explore instead of exploit (0.0 - 1.0 range)
+		private String[] lettersArray = {"A","B","C","D","E","F","G","H","I","J","K"};
 
 	public float version() {
 		return 1.0f;
@@ -441,7 +443,7 @@ public void fortifyPhase()
 		// store the new weight values
 		String answer = "The machines are learning";
 		float gameResult = winFitnessFunction();
-		adjustRules(deployWeights, attackWeights, fortifyWeights, gameResult);
+		adjustRules(gameResult);
 		return answer;
 	}
 
@@ -450,7 +452,7 @@ public void fortifyPhase()
 	if ("youLose".equals(message))
 		{
 			float gameResult = lossFitnessFunction();
-			adjustRules(deployWeights, attackWeights, fortifyWeights, gameResult);
+			adjustRules(gameResult);
 		}
 	return null;
 	}
@@ -478,49 +480,137 @@ public void fortifyPhase()
 				reader.close();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
-		String[] rulesStrings = raw.toString().split("\n");
-		Rule[] rules = new Rule[rulesStrings.length];
-		for (int i=1; i < rulesStrings.length; i++) {
-			rules[i] = new Rule(rulesStrings[i]);
+		String[] threeArrays = raw.toString().split("\n---\n");
+		String deployString = threeArrays[0];
+		String[] deployRulesStrings = deployString.toString().split("\n");
+		deployRules = new Rule[deployRulesStrings.length];
+		for (int i=1; i < deployRulesStrings.length; i++) {
+			deployRules[i] = new Rule(deployRulesStrings[i]);
 		}
 		// sort in ascending rank (1,2,...,n) i.e., better rules first
 		RuleComparator<Rule> c = new RuleComparator<Rule>();
-		Arrays.sort(rules, c);
+		Arrays.sort(deployRules, c);
+		// for A-L, find the first rule that mentions that letter
+		for (int i = 0; i < lettersArray.length; i++) {
+			Rule deployRule;
+			int j = 0;
+			do {
+				deployRule = deployRules[j];
+				if (j < deployRules.length - 1) { // iterate if not at the end
+					j++;
+				} else { // otherwise start over
+					j = 0;
+				}
+			// stop iterating with probability P = (1 - explorationThreshold) if a matching rule is found
+			} while (deployRule.getName().equals(lettersArray[i]) == false || rand.nextFloat() < explorationThreshold);
+		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
+			deployWeights[i] = deployRule.getWeight().floatValue();
+		}
 		
-		// for A-L, find the first rule that mentions that letter
-		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
-
+		
 		// get the array of attack rules, sorted in ascending rank (1,2,...,n)
+		String attackString = threeArrays[1];
+		String[] attackRulesStrings = attackString.toString().split("\n");
+		attackRules = new Rule[attackRulesStrings.length];
+		for (int i=1; i < attackRulesStrings.length; i++) {
+			attackRules[i] = new Rule(attackRulesStrings[i]);
+		}
+		Arrays.sort(attackRules, c);
 		// for A-L, find the first rule that mentions that letter
+		String[] lettersArray = {"A","B","C","D","E","F","G","H","I","J","K","L"};
+		for (int i = 0; i < lettersArray.length; i++) {
+			Rule attackRule;
+			int j = 0;
+			do {
+				attackRule = attackRules[j];
+				if (j < attackRules.length - 1) { // iterate if not at the end
+					j++;
+				} else { // otherwise start over
+					j = 0;
+				}
+			// stop iterating with probability P = (1 - explorationThreshold) if a matching rule is found
+			} while (attackRule.getName().equals(lettersArray[i]) == false || rand.nextFloat() < explorationThreshold);
 		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
+			attackWeights[i] = attackRule.getWeight().floatValue();
+		}
 		
 		// get the array of fortify rules, sorted in ascending rank (1,2,...,n)
+		String fortifyString = threeArrays[2];
+		String[] fortifyRulesStrings = fortifyString.toString().split("\n");
+		fortifyRules = new Rule[fortifyRulesStrings.length];
+		for (int i=1; i < fortifyRulesStrings.length; i++) {
+			fortifyRules[i] = new Rule(fortifyRulesStrings[i]);
+		}
 		// for A-L, find the first rule that mentions that letter
+		String[] lettersArray = {"A","B","C","D","E","F","G","H","I","J","K"};
+		for (int i = 0; i < lettersArray.length; i++) {
+			Rule fortifyRule;
+			int j = 0;
+			do {
+				fortifyRule = fortifyRules[j];
+				if (j < fortifyRules.length - 1) { // iterate if not at the end
+					j++;
+				} else { // otherwise start over
+					j = 0;
+				}
+			// stop iterating with probability P = (1 - explorationThreshold) if a matching rule is found
+			} while (fortifyRule.getName().equals(lettersArray[i]) == false || rand.nextFloat() < explorationThreshold);
 		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
+			fortifyWeights[i] = fortifyRule.getWeight().floatValue();
+		}
 	}
 	
-	public void adjustRules(float[] deployWeights, float[] attackWeights, float[] fortifyWeights, float gameResult) {
-		// get the array of deploy rules
-		// for A-L, find the rule that has the weight that was used during this game
-		// change the weight's rank by amount gameResult - determined by the fitness function and passed in
+	public void adjustRules(float adjustment) {
+		String newRules = "";
+		// change each deploy weight's rank by amount adjustment - determined by the fitness function and passed in
+		for (int i=0; i < deployWeights.length; i++) {
+			String name = lettersArray[i];
+			Float weight = Float(deployWeights[i]);
+			for (Rule rule : deployRules) {
+				if (rule.getName().equals(name) && rule.getWeight().floatValue() == weight.floatValue()) {
+					int currentRank = rule.getRank();
+					currentRank = currentRank + adjustment;
+					rule.SetRank(currentRank);
+				}
+			}
+		}
+		// change each attack weight's rank by amount gameResult - determined by the fitness function and passed in
+		for (int i=0; i < attackWeights.length; i++) {
+			String name = lettersArray[i];
+			Float weight = Float(attackWeights[i]);
+			for (Rule rule : attackRules) {
+				if (rule.getName().equals(name) && rule.getWeight().floatValue() == weight.floatValue()) {
+					int currentRank = rule.getRank();
+					currentRank = currentRank + adjustment;
+					rule.SetRank(currentRank);
+				}
+			}
+		}
+		// change each fortify weight's rank by amount gameResult - determined by the fitness function and passed in
+		for (int i=0; i < fortifyWeights.length; i++) {
+			String name = lettersArray[i];
+			Float weight = Float(fortifyWeights[i]);
+			for (Rule rule : fortifyRules) {
+				if (rule.getName().equals(name) && rule.getWeight().floatValue() == weight.floatValue()) {
+					int currentRank = rule.getRank();
+					currentRank = currentRank + adjustment;
+					rule.SetRank(currentRank);
+				}
+			}
+		}
+		// convert the rules to string format
 		
-		// get the array of attack rules
-		// get the array of deploy rules
-		// for A-L, find the rule that has the weight that was used during this game
-		// change the weight's rank by amount gameResult - determined by the fitness function and passed in
+		for (int i=0; i < deployRules.length; i++) {
+			newRules = newRules + "\n" + deployRules[i].toString();
+			newRules = newRules + "\n" + attackRules[i].toString();
+			newRules = newRules + "\n" + fortifyRules[i].toString();
+		}
 		
-		// get the array of fortify rules
-		// get the array of deploy rules
-		// for A-L, find the rule that has the weight that was used during this game
-		// change the weight's rank by amount gameResult - determined by the fitness function and passed in
-		
-		// write the changes to disk for persistence
+		// write the changes to disk for persistence, overwriting the old values
 		File rulesFile = new File(rulesPath);
 		
 		FileWriter writer;
@@ -536,19 +626,7 @@ public void fortifyPhase()
 	
 	public void setup() {
 		rand = new Random();
-		makeLogEntry("About to get deployA...\n");
-		float stored = board.storageGetFloat("deployA", Float.NaN);
-		makeLogEntry("Got deployA: " + stored + "\n");
-		if (Float.isNaN(stored)) {
-			makeLogEntry("stored is NaN.\n");
-			// if the weights have not been previously initialized, initialize them
-			java.util.Arrays.fill(deployWeights, 1);
-			java.util.Arrays.fill(attackWeights, 1);
-			java.util.Arrays.fill(fortifyWeights, 1);
-		}
-		else { // otherwise, retrieve them
-			getWeightValues();
-		}
+		getWeightValues();
 	}
 	
 	public void makeLogEntry(String message) {
