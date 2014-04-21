@@ -1,7 +1,9 @@
 package com.sillysoft.lux.agent;
+//package java.lang;
 
 import com.sillysoft.lux.*;
 import com.sillysoft.lux.util.*;
+
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -469,10 +471,9 @@ public void fortifyPhase()
 	
 	public void getWeightValues() {
 		// get the array of deploy rules
+		 makeLogEntry("getWeightValues called\n");
 		char[] raw = {};
 		FileReader reader;
-		makeLogEntry("------Rule Path: " + rulesPath + "\n\n");
-
 		try {
 			reader = new FileReader(rulesPath);
 			try {
@@ -484,13 +485,19 @@ public void fortifyPhase()
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 		}
+		makeLogEntry("file found and read\n");
 		String[] threeArrays = raw.toString().split("\n---\n");
+		makeLogEntry("split into 3 arrays\n");
 		String deployString = threeArrays[0];
 		String[] deployRulesStrings = deployString.toString().split("\n");
+		makeLogEntry("deploy rules string set\n");
 		deployRules = new Rule[deployRulesStrings.length];
-		for (int i=1; i < deployRulesStrings.length; i++) {
+		for (int i=0; i < deployRulesStrings.length; i++) {
+			makeLogEntry("deploy rule: \n");
 			deployRules[i] = new Rule(deployRulesStrings[i]);
+			
 		}
+		makeLogEntry("deploy rules created\n");
 		// sort in ascending rank (1,2,...,n) i.e., better rules first
 		RuleComparator<Rule> c = new RuleComparator<Rule>();
 		Arrays.sort(deployRules, c);
@@ -508,10 +515,9 @@ public void fortifyPhase()
 			// stop iterating with probability P = (1 - explorationThreshold) if a matching rule is found
 			} while (deployRule.getName().equals(lettersArray[i]) == false || rand.nextFloat() < explorationThreshold);
 		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
-			deployWeights[i] = deployRule.getWeight().floatValue();
+			deployWeights[i] = deployRule.getWeight();
 		}
-		
-		
+		makeLogEntry("deploy weights set\n");
 		// get the array of attack rules, sorted in ascending rank (1,2,...,n)
 		String attackString = threeArrays[1];
 		String[] attackRulesStrings = attackString.toString().split("\n");
@@ -520,8 +526,8 @@ public void fortifyPhase()
 			attackRules[i] = new Rule(attackRulesStrings[i]);
 		}
 		Arrays.sort(attackRules, c);
+		makeLogEntry("attack rules created\n");
 		// for A-L, find the first rule that mentions that letter
-		String[] lettersArray = {"A","B","C","D","E","F","G","H","I","J","K","L"};
 		for (int i = 0; i < lettersArray.length; i++) {
 			Rule attackRule;
 			int j = 0;
@@ -535,9 +541,10 @@ public void fortifyPhase()
 			// stop iterating with probability P = (1 - explorationThreshold) if a matching rule is found
 			} while (attackRule.getName().equals(lettersArray[i]) == false || rand.nextFloat() < explorationThreshold);
 		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
-			attackWeights[i] = attackRule.getWeight().floatValue();
+			attackWeights[i] = attackRule.getWeight();
 		}
-		
+		makeLogEntry("attack weights set\n");
+
 		// get the array of fortify rules, sorted in ascending rank (1,2,...,n)
 		String fortifyString = threeArrays[2];
 		String[] fortifyRulesStrings = fortifyString.toString().split("\n");
@@ -546,7 +553,6 @@ public void fortifyPhase()
 			fortifyRules[i] = new Rule(fortifyRulesStrings[i]);
 		}
 		// for A-L, find the first rule that mentions that letter
-		String[] lettersArray = {"A","B","C","D","E","F","G","H","I","J","K"};
 		for (int i = 0; i < lettersArray.length; i++) {
 			Rule fortifyRule;
 			int j = 0;
@@ -560,8 +566,9 @@ public void fortifyPhase()
 			// stop iterating with probability P = (1 - explorationThreshold) if a matching rule is found
 			} while (fortifyRule.getName().equals(lettersArray[i]) == false || rand.nextFloat() < explorationThreshold);
 		// assign that rule's weight to the corresponding letter's index (A=0,B=1,...,L=12)
-			fortifyWeights[i] = fortifyRule.getWeight().floatValue();
+			fortifyWeights[i] = fortifyRule.getWeight();
 		}
+		makeLogEntry("GetWeights finished\n");
 	}
 	
 	public void adjustRules(float adjustment) {
@@ -569,11 +576,11 @@ public void fortifyPhase()
 		// change each deploy weight's rank by amount adjustment - determined by the fitness function and passed in
 		for (int i=0; i < deployWeights.length; i++) {
 			String name = lettersArray[i];
-			Float weight = Float(deployWeights[i]);
+			Float weight = new Float(deployWeights[i]);
 			for (Rule rule : deployRules) {
-				if (rule.getName().equals(name) && rule.getWeight().floatValue() == weight.floatValue()) {
+				if (rule.getName().equals(name) && rule.getWeight() == weight.floatValue()) {
 					int currentRank = rule.getRank();
-					currentRank = currentRank + adjustment;
+					currentRank = currentRank + (int) adjustment;
 					rule.SetRank(currentRank);
 				}
 			}
@@ -581,11 +588,11 @@ public void fortifyPhase()
 		// change each attack weight's rank by amount gameResult - determined by the fitness function and passed in
 		for (int i=0; i < attackWeights.length; i++) {
 			String name = lettersArray[i];
-			Float weight = Float(attackWeights[i]);
+			Float weight = new Float(attackWeights[i]);
 			for (Rule rule : attackRules) {
-				if (rule.getName().equals(name) && rule.getWeight().floatValue() == weight.floatValue()) {
+				if (rule.getName().equals(name) && rule.getWeight() == weight.floatValue()) {
 					int currentRank = rule.getRank();
-					currentRank = currentRank + adjustment;
+					currentRank = currentRank + (int)adjustment;
 					rule.SetRank(currentRank);
 				}
 			}
@@ -593,11 +600,11 @@ public void fortifyPhase()
 		// change each fortify weight's rank by amount gameResult - determined by the fitness function and passed in
 		for (int i=0; i < fortifyWeights.length; i++) {
 			String name = lettersArray[i];
-			Float weight = Float(fortifyWeights[i]);
+			Float weight = new Float(fortifyWeights[i]);
 			for (Rule rule : fortifyRules) {
-				if (rule.getName().equals(name) && rule.getWeight().floatValue() == weight.floatValue()) {
+				if (rule.getName().equals(name) && rule.getWeight() == weight.floatValue()) {
 					int currentRank = rule.getRank();
-					currentRank = currentRank + adjustment;
+					currentRank = currentRank + (int)adjustment;
 					rule.SetRank(currentRank);
 				}
 			}
