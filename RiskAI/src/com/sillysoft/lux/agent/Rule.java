@@ -9,8 +9,8 @@ public class Rule {
 	public Rule(String input) {
 		String[] values = input.split("_");
 		name = values[0];
-		weight = new Float(values[1]);
-		rank = new Integer(values[2]);
+		weight = Float.parseFloat(values[1]);
+		rank = Integer.parseInt(values[2]);
 	}
 	
 	public String getName() {
@@ -33,7 +33,7 @@ public class Rule {
 		int result = rank.intValue();
 		return result;
 	}
-	public int setRank(int input) {
+	public int SetRank(int input) {
 		rank = input;
 		return 0;
 	}
@@ -41,5 +41,6 @@ public class Rule {
 		String result = name.toString() + "_" + weight.toString() + "_" + rank.toString();
 		return result;
 	}
+
 	
 }

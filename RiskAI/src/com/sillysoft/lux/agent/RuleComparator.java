@@ -10,10 +10,10 @@ public class RuleComparator<T> implements Comparator<T> {
 		Rule rule2 = (Rule)o2;
 		if (rule1.getRank() < rule2.getRank()) {
 			result = -1;
-		} else if (rule1.getRank() < rule2.getRank()) {
-			result = 0;
+		} else if (rule1.getRank() > rule2.getRank()) {
+			result =1 ;
 		} else {
-			result = 1;
+			result = 0;
 		}
 		return result;
 	}
