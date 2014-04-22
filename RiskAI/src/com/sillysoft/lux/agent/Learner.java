@@ -34,7 +34,7 @@ public class Learner extends SmartAgentBase {
 		private String fileName;
 		private String rulesPath = Board.getAgentPath() + "rules.txt";
 		private float explorationThreshold = 0.15f; // probability to explore instead of exploit (0.0 - 1.0 range)
-		private String[] lettersArray = {"A","B","C","D","E","F","G","H","I","J","K"};
+		private String[] lettersArray = {"A","B","C","D","E","F","G","H","I","J","K","L","M"};
 
 	public float version() {
 		return 1.0f;
@@ -50,31 +50,37 @@ public class Learner extends SmartAgentBase {
 		return result;
 	}
 
+	@Override
+	public void placeInitialArmies( int numberOfArmies )
+	{
+		placeArmies(numberOfArmies);
+	}
+	
 	public void placeArmies( int numberOfArmies )
 	{
 		setup();
-	Country mostValuableCountry = null;
-	float largestStrategicValue=-100000;
-	// Use a PlayerIterator to cycle through all the countries that we own.
-	CountryIterator own = new PlayerIterator( ID, countries );
-	while(numberOfArmies>0)
-	{
-		while (own.hasNext()) 
+		Country mostValuableCountry = null;
+		float largestStrategicValue=-100000;
+		// Use a PlayerIterator to cycle through all the countries that we own.
+		CountryIterator own = new PlayerIterator( ID, countries );
+		while(numberOfArmies>0)
 		{
-			Country us = own.next();
-			float strategicValue=calculateStrategicValue(us, deployWeights);
-			
-			// If it's the best so far store it
-			if ( strategicValue > largestStrategicValue )
+			while (own.hasNext()) 
 			{
-				largestStrategicValue=strategicValue;
-				mostValuableCountry=us;
+				Country us = own.next();
+				float strategicValue=calculateStrategicValue(us, deployWeights);
+				
+				// If it's the best so far store it
+				if ( strategicValue > largestStrategicValue )
+				{
+					largestStrategicValue=strategicValue;
+					mostValuableCountry=us;
+				}
+			}
+			board.placeArmies( 1, mostValuableCountry);
+			numberOfArmies--;
 			}
 		}
-		board.placeArmies( 1, mostValuableCountry);
-		numberOfArmies--;
-		}
-	}
 	
 	public void cardsPhase( Card[] cards )
 	{
